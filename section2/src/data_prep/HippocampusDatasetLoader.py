@@ -7,7 +7,7 @@ from os.path import isfile, join
 
 import numpy as np
 from medpy.io import load
-
+import nibabel as nib
 from utils.utils import med_reshape
 
 def LoadHippocampusData(root_dir, y_shape, z_shape):
@@ -28,20 +28,28 @@ def LoadHippocampusData(root_dir, y_shape, z_shape):
 
     images = [f for f in listdir(image_dir) if (
         isfile(join(image_dir, f)) and f[0] != ".")]
-
+    max_voxel = 0
+    min_voxel = 100
     out = []
     for f in images:
 
         # We would benefit from mmap load method here if dataset doesn't fit into memory
         # Images are loaded here using MedPy's load method. We will ignore header 
         # since we will not use it
-        image, _ = load(os.path.join(image_dir, f))
+        #image, _ = load(os.path.join(image_dir, f))
         label, _ = load(os.path.join(label_dir, f))
 
-        # TASK: normalize all images (but not labels) so that values are in [0..1] range
-        bitpix = 32
-        image = image / 2**bitpix + 0.5 
+        image_data = nib.load(os.path.join(image_dir, f))
+        image = image_data.get_fdata()
 
+        #print(np.min(image), np.max(image))
+        # TASK: normalize all images (but not labels) so that values are in [0..1] range
+        bitpix = image_data.header['bitpix']
+        image = (image / 2**bitpix)
+        if np.max(image) > max_voxel:
+            max_voxel = np.max(image)
+        if np.min(image) < min_voxel:
+            min_voxel = np.min(image)           
         # We need to reshape data since CNN tensors that represent minibatches
         # in our case will be stacks of slices and stacks need to be of the same size.
         # In the inference pathway we will need to crop the output to that
@@ -60,4 +68,5 @@ def LoadHippocampusData(root_dir, y_shape, z_shape):
 
     # Hippocampus dataset only takes about 300 Mb RAM, so we can afford to keep it all in RAM
     print(f"Processed {len(out)} files, total {sum([x['image'].shape[0] for x in out])} slices")
+    print("min max", min_voxel, max_voxel)
     return np.array(out)

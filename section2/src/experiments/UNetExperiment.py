@@ -58,15 +58,15 @@ class UNetExperiment:
         # Do we have CUDA available?
         if not torch.cuda.is_available():
             print("WARNING: No CUDA device is found. This may take significantly longer!")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        #self.device ="cpu"
         # Configure our model and other training implements
         # We will use a recursive UNet model from German Cancer Research Center, 
         # Division of Medical Image Computing. It is quite complicated and works 
         # very well on this task. Feel free to explore it or plug in your own model
         self.model = UNet(num_classes=3)
         self.model.to(self.device)
-
+        self.model.load_state_dict(torch.load("model.pth"))
         # We are using a standard cross-entropy loss since the model output is essentially
         # a tensor with softmax'd prediction of each pixel's probability of belonging 
         # to a certain class
@@ -96,9 +96,9 @@ class UNetExperiment:
             # TASK: You have your data in batch variable. Put the slices as 4D Torch Tensors of 
             # shape [BATCH_SIZE, 1, PATCH_SIZE, PATCH_SIZE] into variables data and target. 
             # Feed data to the model and feed target to the loss function
-            # 
-            data = np.stack([x['image'] for x in batch])
-            target = np.stack([x['seg'] for x in batch])
+            #
+            data = batch['image'].to(self.device)
+            target = batch['seg'].to(self.device)
 
             prediction = self.model(data)
 
@@ -154,11 +154,11 @@ class UNetExperiment:
                 
                 # TASK: Write validation code that will compute loss on a validation sample
                 # <YOUR CODE HERE>
-                data = np.stack([x['image'] for x in batch])
-                target = np.stack([x['seg'] for x in batch])
+                data = batch['image'].to(self.device)
+                target = batch['seg'].to(self.device)
 
                 prediction = self.model(data)
-
+                prediction_softmax = F.softmax(prediction, dim=1)
                 loss = self.loss_function(prediction, target[:, 0, :, :])
 
                 print(f"Batch {i}. Data shape {data.shape} Loss {loss}")
@@ -228,7 +228,6 @@ class UNetExperiment:
         # for every in test set
         for i, x in enumerate(self.test_data):
             pred_label = inference_agent.single_volume_inference(x["image"])
-
             # We compute and report Dice and Jaccard similarity coefficients which 
             # assess how close our volumes are to each other
 
@@ -238,9 +237,9 @@ class UNetExperiment:
             # on Wikipedia. If you completed it
             # correctly (and if you picked your train/val/test split right ;)),
             # your average Jaccard on your test set should be around 0.80
-
-            dc = Dice3d(pred_label, x["seg"])
-            jc = Jaccard3d(pred_label, x["seg"])
+            #pred_label.to(self.device)
+            dc = Dice3d(pred_label, x['seg'])
+            jc = Jaccard3d(pred_label, x['seg'])
             dc_list.append(dc)
             jc_list.append(jc)
 

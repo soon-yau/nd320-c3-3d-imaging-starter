@@ -15,8 +15,8 @@ class Config:
         self.name = "Basic_unet"
         self.root_dir = "../../section1/out/"
         self.n_epochs = 10
-        self.learning_rate = 0.0002
-        self.batch_size = 8
+        self.learning_rate = 8*0.0002
+        self.batch_size = 8*8
         self.patch_size = 64
         self.test_results_dir = "./"
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # the array with indices of training volumes to be used for training, validation 
     # and testing respectively.
     # <YOUR CODE GOES HERE>
-    split['train'], test_val_keys = train_test_split(keys, test_size=0.4)
+    split['train'], test_val_keys = train_test_split(keys, test_size=0.3)
     split['val'], split['test'] = train_test_split(test_val_keys, test_size=0.5)
 
     # Set up and run experiment
@@ -62,15 +62,15 @@ if __name__ == "__main__":
     # del dataset 
 
     # run training
-    exp.run()
+    #exp.run()
 
     # prep and run testing
 
     # TASK: Test method is not complete. Go to the method and complete it
     results_json = exp.run_test()
-
+    
     results_json["config"] = vars(c)
 
     with open(os.path.join(exp.out_dir, "results.json"), 'w') as out_file:
         json.dump(results_json, out_file, indent=2, separators=(',', ': '))
-
+    print(results_json['overall'])
