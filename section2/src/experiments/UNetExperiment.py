@@ -97,8 +97,8 @@ class UNetExperiment:
             # shape [BATCH_SIZE, 1, PATCH_SIZE, PATCH_SIZE] into variables data and target. 
             # Feed data to the model and feed target to the loss function
             # 
-            # data = <YOUR CODE HERE>
-            # target = <YOUR CODE HERE>
+            data = np.stack([x['image'] for x in batch])
+            target = np.stack([x['seg'] for x in batch])
 
             prediction = self.model(data)
 
@@ -109,7 +109,7 @@ class UNetExperiment:
             loss = self.loss_function(prediction, target[:, 0, :, :])
 
             # TASK: What does each dimension of variable prediction represent?
-            # ANSWER:
+            # ANSWER: Dim 0: Batch, Dim 2 and 3 voxels
 
             loss.backward()
             self.optimizer.step()
@@ -154,6 +154,12 @@ class UNetExperiment:
                 
                 # TASK: Write validation code that will compute loss on a validation sample
                 # <YOUR CODE HERE>
+                data = np.stack([x['image'] for x in batch])
+                target = np.stack([x['seg'] for x in batch])
+
+                prediction = self.model(data)
+
+                loss = self.loss_function(prediction, target[:, 0, :, :])
 
                 print(f"Batch {i}. Data shape {data.shape} Loss {loss}")
 
