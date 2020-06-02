@@ -216,8 +216,9 @@ def get_series_for_inference(path):
     # Here we are assuming that path is a directory that contains a full study as a collection
     # of files
     # We are reading all files into a list of PyDicom objects so that we can filter them later
+    print(path)
     dicoms = [pydicom.dcmread(os.path.join(path, f)) for f in os.listdir(path)]
-
+    #print(dicoms)
     # TASK: create a series_for_inference variable that will contain a list of only 
     # those PyDicom objects that represent files that belong to the series that you 
     # will run inference on.
@@ -230,7 +231,12 @@ def get_series_for_inference(path):
     # Hint: inspect the metadata of HippoCrop series
 
     # <YOUR CODE HERE>
-
+    series_for_inference = []
+    for i, d in enumerate(dicoms):
+        if d.Modality in ['MR', 'CT']:
+            series_for_inference.append(d)
+        else:
+            print(i, d.Modality, d.Rows)
     # Check if there are more than one series (using set comprehension).
     if len({f.SeriesInstanceUID for f in series_for_inference}) != 1:
         print("Error: can not figure out what series to run inference on")
@@ -271,7 +277,7 @@ if __name__ == "__main__":
     # TASK: Use the UNetInferenceAgent class and model parameter file from the previous section
     inference_agent = UNetInferenceAgent(
         device="cpu",
-        parameter_file_path=r"<PATH TO PARAMETER FILE>")
+        parameter_file_path="../../section2/src/model.pth")
 
     # Run inference
     # TASK: single_volume_inference_unpadded takes a volume of arbitrary size 
@@ -283,7 +289,7 @@ if __name__ == "__main__":
 
     # Create and save the report
     print("Creating and pushing report...")
-    report_save_path = r"<TEMPORARY PATH TO SAVE YOUR REPORT FILE>"
+    report_save_path = r"../reports/"
     # TASK: create_report is not complete. Go and complete it. 
     # STAND OUT SUGGESTION: save_report_as_dcm has some suggestions if you want to expand your
     # knowledge of DICOM format
