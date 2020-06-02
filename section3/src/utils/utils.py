@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import torch
 from PIL import Image
+import math
 
 # Tell Matplotlib to not try and use interactive backend
 mpl.use("agg")
@@ -94,9 +95,13 @@ def med_reshape(image, new_shape):
     """
 
     reshaped_image = np.zeros(new_shape, dtype=np.float32)
-
+    ratio = max(np.divide(image.shape, new_shape))
+    resize_shape = list(map(lambda x: int(math.ceil(x)), (image.shape/ratio)[1:]))
+    print("hei", resize_shape)
+    for i in range(new_shape[0]):
+        reshaped_image[i,:resize_shape[0], :resize_shape[1]] = Image.fromarray(image[i]).resize(resize_shape[::-1])
     # TASK: write your original image into the reshaped image
     # <CODE GOES HERE>
-    x, y, z = image.shape
-    reshaped_image[:x, :y ,:z] = image
+    #x, y, z = image.shape
+    #reshaped_image[:x, :y ,:z] = image
     return reshaped_image

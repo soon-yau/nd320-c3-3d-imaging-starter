@@ -62,7 +62,11 @@ def get_predicted_volumes(pred):
 
     # TASK: Compute the volume of your hippocampal prediction
     # <YOUR CODE HERE>
-
+    #volume_bg = sum(pred==0)
+    volume_ant = np.sum(pred==1)
+    volume_post = np.sum(pred==2)
+    total_volume = volume_ant + volume_post
+    print("v", volume_ant, volume_post)
     return {"anterior": volume_ant, "posterior": volume_post, "total": total_volume}
 
 def create_report(inference, header, orig_vol, pred_vol):
@@ -99,11 +103,11 @@ def create_report(inference, header, orig_vol, pred_vol):
     # depend on how you present them.
 
     # SAMPLE CODE BELOW: UNCOMMENT AND CUSTOMIZE
-    # draw.text((10, 0), "HippoVolume.AI", (255, 255, 255), font=header_font)
-    # draw.multiline_text((10, 90),
-    #                     f"Patient ID: {header.PatientID}\n"
-    #                       <WHAT OTHER INFORMATION WOULD BE RELEVANT?>
-    #                     (255, 255, 255), font=main_font)
+    draw.text((10, 0), "HippoVolume.AI", (255, 255, 255), font=header_font)
+    draw.multiline_text((10, 90),
+                         f"Patient ID: {header.PatientID}\n",
+                           #<WHAT OTHER INFORMATION WOULD BE RELEVANT?>
+                         (255, 255, 255), font=main_font)
 
     # STAND-OUT SUGGESTION:
     # In addition to text data in the snippet above, can you show some images?
@@ -289,7 +293,7 @@ if __name__ == "__main__":
 
     # Create and save the report
     print("Creating and pushing report...")
-    report_save_path = r"../reports/"
+    report_save_path = "/home/"
     # TASK: create_report is not complete. Go and complete it. 
     # STAND OUT SUGGESTION: save_report_as_dcm has some suggestions if you want to expand your
     # knowledge of DICOM format
