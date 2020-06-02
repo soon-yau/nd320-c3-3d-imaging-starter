@@ -39,7 +39,7 @@ def LoadHippocampusData(root_dir, y_shape, z_shape):
         label, _ = load(os.path.join(label_dir, f))
 
         # TASK: normalize all images (but not labels) so that values are in [0..1] range
-        bitpix = image.header['bitpix']
+        bitpix = 32
         image = image / 2**bitpix + 0.5 
 
         # We need to reshape data since CNN tensors that represent minibatches
