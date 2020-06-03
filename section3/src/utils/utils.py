@@ -97,7 +97,7 @@ def med_reshape(image, new_shape):
     reshaped_image = np.zeros(new_shape, dtype=np.float32)
     ratio = max(np.divide(image.shape, new_shape))
     resize_shape = list(map(lambda x: int(math.ceil(x)), (image.shape/ratio)[1:]))
-    print("hei", resize_shape)
+    print("reshape", image.shape, new_shape, resize_shape)
     for i in range(new_shape[0]):
         reshaped_image[i,:resize_shape[0], :resize_shape[1]] = Image.fromarray(image[i]).resize(resize_shape[::-1])
     # TASK: write your original image into the reshaped image

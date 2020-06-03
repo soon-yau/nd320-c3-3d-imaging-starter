@@ -24,6 +24,8 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
 
+import pickle
+
 from inference.UNetInferenceAgent import UNetInferenceAgent
 
 def load_dicom_volume_as_numpy_from_list(dcmlist):
@@ -87,14 +89,16 @@ def create_report(inference, header, orig_vol, pred_vol):
     # sending them on as Secondary Capture IODs (http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_A.8.html)
     # Essentially, our report is just a standard RGB image, with some metadata, packed into 
     # DICOM format. 
-
+    pickle.dump({'ori':orig_vol, 'pred':pred_vol}, open("info.p","wb"))
     pimg = Image.new("RGB", (1000, 1000))
     draw = ImageDraw.Draw(pimg)
 
     header_font = ImageFont.truetype("assets/Roboto-Regular.ttf", size=40)
     main_font = ImageFont.truetype("assets/Roboto-Regular.ttf", size=20)
 
-    slice_nums = [orig_vol.shape[2]//3, orig_vol.shape[2]//2, orig_vol.shape[2]*3//4] # is there a better choice?
+    #slice_nums = [orig_vol.shape[2]//3, orig_vol.shape[2]//2, orig_vol.shape[2]*3//4] # is there a better choice?
+    # Find slice with largest predicted volume
+    slice_num = np.argmax(np.sum(pred_vol, axis=(0,1)))
 
     # TASK: Create the report here and show information that you think would be relevant to
     # clinicians. A sample code is provided below, but feel free to use your creative 
@@ -104,10 +108,16 @@ def create_report(inference, header, orig_vol, pred_vol):
 
     # SAMPLE CODE BELOW: UNCOMMENT AND CUSTOMIZE
     draw.text((10, 0), "HippoVolume.AI", (255, 255, 255), font=header_font)
-    draw.multiline_text((10, 90),
-                         f"Patient ID: {header.PatientID}\n",
-                           #<WHAT OTHER INFORMATION WOULD BE RELEVANT?>
-                         (255, 255, 255), font=main_font)
+    
+    # Calculate volume
+    volume_unit = float(header.SliceThickness)*np.prod(header.PixelSpacing)
+    print(slice_num)
+    volume_str = "Volume(mm3):\n   Anterior: %d \n   Posterior: %d \n   Total: %d\n"%(\
+    volume_unit*inference["anterior"], 
+    volume_unit*inference["posterior"], 
+    volume_unit*inference["total"])
+
+
 
     # STAND-OUT SUGGESTION:
     # In addition to text data in the snippet above, can you show some images?
@@ -116,13 +126,31 @@ def create_report(inference, header, orig_vol, pred_vol):
     #
     # Create a PIL image from array:
     # Numpy array needs to flipped, transposed and normalized to a matrix of values in the range of [0..255]
-    # nd_img = np.flip((slice/np.max(slice))*0xff).T.astype(np.uint8)
+    slice = orig_vol[:,:,slice_num]
+    nd_img = np.flip((0.5*slice/np.max(slice))*0xff).T.astype(np.uint8)
+    rgb_img = np.stack((nd_img,)*3, axis=2)
+    
+    slice = (pred_vol[:,:,slice_num]==1)*1.
+    nd_img = np.flip((slice/np.max(slice))*0xff).T.astype(np.uint8)
+    rgb_img[:,:,2] +=  nd_img//4
+    
+    slice = (pred_vol[:,:,slice_num]==2)*1.
+    nd_img = np.flip((slice/np.max(slice))*0xff).T.astype(np.uint8)
+    rgb_img[:,:,0] +=  nd_img//4
+    
     # This is how you create a PIL image from numpy array
-    # pil_i = Image.fromarray(nd_img, mode="L").convert("RGBA").resize(<dimensions>)
+    pil_i = Image.fromarray(rgb_img).convert("RGBA").resize((800,800))
     # Paste the PIL image into our main report image object (pimg)
-    # pimg.paste(pil_i, box=(10, 280))
-
+    pimg.paste(pil_i, box=(100, 100))
+    
+    draw.multiline_text((10, 90),
+                         f"Patient ID: {header.PatientID}\n" +volume_str,
+                        
+                           #<WHAT OTHER INFORMATION WOULD BE RELEVANT?>
+                         (255, 255, 255), font=main_font)
+    
     return pimg
+
 
 def save_report_as_dcm(header, report, path):
     """Writes the supplied image as a DICOM Secondary Capture file
@@ -281,7 +309,7 @@ if __name__ == "__main__":
     # TASK: Use the UNetInferenceAgent class and model parameter file from the previous section
     inference_agent = UNetInferenceAgent(
         device="cpu",
-        parameter_file_path="../../section2/src/model.pth")
+        parameter_file_path="model.pth")
 
     # Run inference
     # TASK: single_volume_inference_unpadded takes a volume of arbitrary size 
@@ -293,7 +321,7 @@ if __name__ == "__main__":
 
     # Create and save the report
     print("Creating and pushing report...")
-    report_save_path = "/home/"
+    report_save_path = "report.dcm"
     # TASK: create_report is not complete. Go and complete it. 
     # STAND OUT SUGGESTION: save_report_as_dcm has some suggestions if you want to expand your
     # knowledge of DICOM format
@@ -303,14 +331,14 @@ if __name__ == "__main__":
     # Send report to our storage archive
     # TASK: Write a command line string that will issue a DICOM C-STORE request to send our report
     # to our Orthanc server (that runs on port 4242 of the local machine), using storescu tool
-    os_command("<COMMAND LINE TO SEND REPORT TO ORTHANC>")
+    os_command(f"storescu 127.0.0.1 4242 -v -aec HIPPOAI {report_save_path}")
 
     # This line will remove the study dir if run as root user
     # Sleep to let our StoreSCP server process the report (remember - in our setup
     # the main archive is routing everyting that is sent to it, including our freshly generated
     # report) - we want to give it time to save before cleaning it up
     time.sleep(2)
-    shutil.rmtree(study_dir, onerror=lambda f, p, e: print(f"Error deleting: {e[1]}"))
+    #shutil.rmtree(study_dir, onerror=lambda f, p, e: print(f"Error deleting: {e[1]}"))
 
     print(f"Inference successful on {header['SOPInstanceUID'].value}, out: {pred_label.shape}",
           f"volume ant: {pred_volumes['anterior']}, ",
